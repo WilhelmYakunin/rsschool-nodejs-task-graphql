@@ -1,7 +1,6 @@
 import { FastifyPluginAsyncJsonSchemaToTs } from '@fastify/type-provider-json-schema-to-ts';
 import {
   graphql,
-  GraphQLID,
   GraphQLNonNull,
   GraphQLObjectType,
   GraphQLSchema,
@@ -10,7 +9,6 @@ import {
 } from 'graphql';
 
 import {
-  allByIdType,
   allType,
   ChangeMemberTypeInputDTO,
   ChangePostInputDTO,
@@ -24,12 +22,7 @@ import {
   profileType,
   SubscribeInputDTO,
   UserInputDTO,
-  // usersWithAllDataType,
-  // usersWithUserSubscribedToProfileType,
-  // usersWithUserSubscribedToType,
   userType,
-  userTypeWithAllData,
-  userWithSubscribedToUserPostsType,
 } from './schema';
 
 import DataLoader from 'dataloader';
@@ -69,156 +62,6 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
               return result.load(query);
             },
           },
-          getAllById: {
-            type: allByIdType,
-            args: {
-              userId: {
-                type: new GraphQLNonNull(GraphQLID),
-              },
-              profileId: {
-                type: new GraphQLNonNull(GraphQLID),
-              },
-              postId: {
-                type: new GraphQLNonNull(GraphQLID),
-              },
-              memberTypeId: {
-                type: new GraphQLNonNull(GraphQLID),
-              },
-            },
-            resolve: async (_source, args) => {
-              const result = new DataLoader(async () => {
-                const { userId, profileId, postId, memberTypeId } = args;
-
-                const users = await fastify.db.users.findOne({
-                  key: 'id',
-                  equals: userId,
-                });
-
-                const profiles = await fastify.db.profiles.findOne({
-                  key: 'id',
-                  equals: profileId,
-                });
-
-                const posts = await fastify.db.posts.findOne({
-                  key: 'id',
-                  equals: postId,
-                });
-
-                const memberTypes = await fastify.db.memberTypes.findOne({
-                  key: 'id',
-                  equals: memberTypeId,
-                });
-
-                return [{ users, profiles, posts, memberTypes }];
-              });
-
-              return result.load(query);
-            },
-          },
-          getUser: {
-            type: userTypeWithAllData,
-            args: {
-              id: {
-                type: new GraphQLNonNull(GraphQLID),
-              },
-            },
-            resolve: async (source, { userId }) => {
-              const result = new DataLoader(async () => {
-                const user = await fastify.db.users.findOne({
-                  key: 'id',
-                  equals: userId,
-                });
-
-                const profile = await fastify.db.profiles.findOne({
-                  key: 'userId',
-                  equals: userId,
-                });
-
-                const posts = await fastify.db.posts.findOne({
-                  key: 'userId',
-                  equals: userId,
-                });
-
-                const memberType = await fastify.db.memberTypes.findOne({
-                  key: 'id',
-                  equals: userId,
-                });
-
-                return [{ user, profile, posts, memberType }];
-              });
-
-              return result.load(query);
-            },
-          },
-          getUserSubscribedPosts: {
-            type: userWithSubscribedToUserPostsType,
-            args: {
-              id: {
-                type: new GraphQLNonNull(GraphQLID),
-              },
-            },
-            resolve: async (_source, { userId }) => {
-              const result = new DataLoader(async () => {
-                const user = await fastify.db.users.findOne({
-                  key: 'id',
-                  equals: userId,
-                });
-
-                const posts = await fastify.db.posts.findOne({
-                  key: 'userId',
-                  equals: userId,
-                });
-
-                if (user) {
-                  const { subscribedToUserIds } = user;
-
-                  return [{ user, posts, subscribedToUserIds }];
-                }
-
-                throw fastify.httpErrors.badRequest();
-              });
-
-              return result.load(query);
-            },
-          },
-          //         getUsersSubscriptions: {
-          //           type: usersWithUserSubscribedToType,
-          //           resolve: async (source, { userId }) => {
-
-          //             const users = await fastify.db.users.findMany();
-          // const usersSubscriptions = await Promise.all(
-          //   users.map(async (user) => {
-          //     const userSubscribedTo = await fastify.db.users.findMany({
-          //       key: 'subscribedToUserIds',
-          //       inArray: userId,
-          //     });
-          //     const subscribedToUser = await findSubscribedToUsers(
-          //       fastify,
-          //       user.subscribedToUserIds
-          //     );
-
-          //     let userSubscribedToNew = [...userSubscribedTo];
-          //     let subscribedToUserNew = [...subscribedToUser];
-
-          //     if (level > 1) {
-          //       userSubscribedToNew = await getUserSubsciptions(
-          //         fastify,
-          //         userSubscribedTo,
-          //         level - 1
-          //       );
-          //       subscribedToUserNew = await getUserSubsciptions(
-          //         fastify,
-          //         subscribedToUser,
-          //         level - 1
-          //       );
-          //     }
-          //     return { ...user, userSubscribedToNew, subscribedToUserNew };
-          //   })
-          // );
-
-          // return { users: usersSubscriptions };
-          //           }
-          //         },
         }),
       });
 
@@ -349,6 +192,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
 
                 if (!subscribedToUserIds.includes(id)) {
                   const newSubs = [...subscribedToUserIds, id];
+
                   return new DataLoader(async () => [
                     fastify.db.users.change(userId, {
                       subscribedToUserIds: newSubs,
@@ -367,7 +211,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
                 type: new GraphQLNonNull(SubscribeInputDTO),
               },
             },
-            resolve: async (source, { data }) => {
+            resolve: async (_source, { data }) => {
               const { id, userId } = data;
 
               const user = await fastify.db.users.findOne({
