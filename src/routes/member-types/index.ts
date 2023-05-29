@@ -48,13 +48,11 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         reply.badRequest();
       }
 
-      try {
-        return (
-          fastify.db.memberTypes.change(params.id, body) || reply.notFound()
-        );
-      } catch (err: any) {
-        throw fastify.httpErrors.notFound();
-      }
+      const patched = await fastify.db.memberTypes.change(params.id, body);
+
+      if (!patched) throw fastify.httpErrors.notFound();
+
+      return patched;
     }
   );
 };

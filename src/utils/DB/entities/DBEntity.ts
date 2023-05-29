@@ -44,11 +44,11 @@ export default abstract class DBEntity<
       );
     }
     if (options.inArray) {
-      const array = entity[options.key] as (typeof options.inArray)[];
+      const array = entity[options.key] as typeof options.inArray[];
       return array.some((value) => lodash.isEqual(value, options.inArray));
     }
     if (options.inArrayAnyOf) {
-      const array = entity[options.key] as (typeof options.inArray)[];
+      const array = entity[options.key] as typeof options.inArray[];
       return array.some((value) =>
         options.inArrayAnyOf?.some((valueInput) =>
           lodash.isEqual(value, valueInput)

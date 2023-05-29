@@ -94,7 +94,6 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         }
       }
 
-      // await fastify.db.posts.delete(id);
       return fastify.db.users.delete(id);
     }
   );
